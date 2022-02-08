@@ -148,7 +148,7 @@ func main() {
 func parseSubOption(m map[string]map[string]string, o string) error {
 	parts := strings.Split(o, ":")
 	if len(parts) != 3 {
-		return fmt.Errorf("wrong parts in options %v", parts)
+		return fmt.Errorf("wrong number of parts (%d) parts in option %q", len(parts), o)
 	}
 	if m[parts[0]] == nil {
 		m[parts[0]] = make(map[string]string)
