@@ -13,7 +13,7 @@ type Output interface {
 	Description() string
 	// Add(hook, dstip string, dstport uint16, proc *procdetail.ProcessDetail)
 	Process(context.Context, <-chan entry.Connection)
-	Generate() [][]byte
+	Cleanup()
 	// Apply() error
 	SetOption(string, string) error
 }

@@ -18,7 +18,6 @@ type NFLog struct {
 	Config nfl.Config
 	group  int
 	// Output outputs.Output
-	NfLog nfl.Nflog
 }
 
 func (nfh *NFLog) Description() string {
@@ -46,6 +45,8 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 		fmt.Fprintf(os.Stderr, "error opening nflog: %v\n", err)
 		return
 	}
+
+	defer nf.Close()
 
 	fn := func(m nfl.Msg) int {
 		// Just print out the id and payload of the nfqueue packet
@@ -87,7 +88,8 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 }
 
 func (nfh *NFLog) Cleanup() {
-	nfh.NfLog.Close()
+	// fmt.Printf("%+v\n", nfh)
+	// nfh.NfLog.Close()
 }
 
 func (nfh *NFLog) SetOption(k, v string) error {

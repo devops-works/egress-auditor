@@ -134,7 +134,7 @@ func main() {
 	// Register outputs
 	for o := range out {
 		go out[o].Process(ctx, entriesChan)
-		// defer out[o].Cleanup()
+		defer out[o].Cleanup()
 	}
 
 	// Wait for ctrl-c
@@ -143,12 +143,6 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 	cancel()
-
-	fmt.Println()
-	for _, s := range out[0].Generate() {
-		fmt.Println(string(s))
-	}
-	os.Exit(1)
 }
 
 func parseSubOption(m map[string]map[string]string, o string) error {

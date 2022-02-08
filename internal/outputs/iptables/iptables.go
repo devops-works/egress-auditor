@@ -67,18 +67,16 @@ func (e *IPTHandler) Process(ctx context.Context, c <-chan entry.Connection) {
 			return
 		case ent := <-c:
 			key := fmt.Sprintf("%s:%d", ent.DestIP, ent.DestPort)
-			fmt.Println("checking entry", key)
 			if _, ok := e.entries[key]; !ok {
 				e.Lock()
 				e.entries[key] = ent
 				e.Unlock()
-				fmt.Println("added entry", key)
 			}
 		}
 	}
 }
 
-func (e *IPTHandler) Generate() [][]byte {
+func (e *IPTHandler) generate() [][]byte {
 	e.Lock()
 	defer e.Unlock()
 
@@ -97,8 +95,14 @@ func (e *IPTHandler) Generate() [][]byte {
 	return rules
 }
 
-func (e *IPTHandler) Apply() error {
-	return nil
+// func (e *IPTHandler) Apply() error {
+// 	return nil
+// }
+
+func (e *IPTHandler) Cleanup() {
+	for _, s := range e.generate() {
+		fmt.Println(string(s))
+	}
 }
 
 func (e *IPTHandler) SetOption(k, v string) error {
