@@ -19,10 +19,12 @@ sudo iptables -I OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group 100
 go build . 
 # start egress-auditor using the nflog input and the same group id used in iptables
 sudo ./egress-auditor -i nflog -I nflog:group:100 -o iptables -O iptables:verbose:2
-...
-# wait a bit
-# then Ctrl+C to get iptables rules to allow detected connections
-...
+egress-auditor is running... press ctrl-c to stop
+new TCP connection 192.168.1.229:60166 -> 146.148.13.123:443(https) by curl
+^C # <- Ctrl+C pressed here
+# [nflog] Line generated for curl running as ubuntu with command "curl https://www.devops.works"
+# [nflog] Parent of this process was bash running as ubuntu
+iptables -I OUTPUT -d 146.148.13.123 -p tcp -m tcp --dport 443 -j ACCEPT -m comment --comment "curl"
 ```
 
 ## Usage
@@ -80,7 +82,12 @@ TODO:
 - [x] iptables
 - [] json
 - [] loki
-   
+
+## Caveats
+
+- supports only TCP for now
+- responsible process might not be found for really short lived connections
+
 ## Licence
 
 MIT

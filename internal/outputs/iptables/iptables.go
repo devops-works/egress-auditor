@@ -60,15 +60,20 @@ func (e *IPTHandler) Process(ctx context.Context, c <-chan entry.Connection) {
 		panic(err)
 	}
 
-	select {
-	case <-ctx.Done():
-		return
-	case ent := <-c:
-		key := fmt.Sprintf("%s:%d", ent.DestIP, ent.DestPort)
-		if _, ok := e.entries[key]; !ok {
-			e.Lock()
-			defer e.Unlock()
-			e.entries[key] = ent
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("terminating capture")
+			return
+		case ent := <-c:
+			key := fmt.Sprintf("%s:%d", ent.DestIP, ent.DestPort)
+			fmt.Println("checking entry", key)
+			if _, ok := e.entries[key]; !ok {
+				e.Lock()
+				e.entries[key] = ent
+				e.Unlock()
+				fmt.Println("added entry", key)
+			}
 		}
 	}
 }
