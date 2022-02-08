@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"reflect"
 	"strings"
 	"syscall"
+	"unsafe"
 
 	"github.com/devops-works/egress-auditor/internal/entry"
 	"github.com/devops-works/egress-auditor/internal/inputs"
@@ -38,6 +40,7 @@ func main() {
 			HookOptsFn    func(string) `short:"I" long:"inopt" description:"Input option in the form <hookname>:<key>:<value>"`
 			HandlerOptsFn func(string) `short:"O" long:"outopt" description:"Output option in the form <handlername>:<key>:<value>"`
 			ListFn        func()       `short:"l" long:"list" description:"list available inputs and outputs"`
+			RenameProc    string       `short:"R" long:"rename" description:"rename egress-auditor process to this name and wipe arguments in ps output"`
 		}
 		in  []inputs.Input
 		out []outputs.Output
@@ -119,6 +122,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	if opts.RenameProc != "" {
+		if len(opts.RenameProc) > len(os.Args[0]) {
+			fmt.Fprintf(os.Stderr, "unable to rename process to %q: new name must be shorter or have the same size as %q", opts.RenameProc, os.Args[0])
+			os.Exit(1)
+		}
+		setProcessName(opts.RenameProc)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -155,4 +166,22 @@ func parseSubOption(m map[string]map[string]string, o string) error {
 	}
 	m[parts[0]][parts[1]] = parts[2]
 	return nil
+}
+
+func setProcessName(name string) {
+	for pos := range os.Args {
+		argStr := (*reflect.StringHeader)(unsafe.Pointer(&os.Args[pos]))
+		arg := (*[1 << 30]byte)(unsafe.Pointer(argStr.Data))[:argStr.Len]
+
+		n := 0
+		// only replace namefor arg[0]
+		if pos == 0 {
+			n = copy(arg, name)
+		}
+		if n < len(arg) {
+			for i := n; i < len(arg); i++ {
+				arg[i] = 0
+			}
+		}
+	}
 }

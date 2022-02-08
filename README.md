@@ -47,6 +47,21 @@ invocation is:
 Of course, this implies the iptables output module has been loaded using `-i
 iptables` in the same CLI. 
 
+The `-R` option can be used to hide `egress-auditor` and it's arguments from
+`ps` output. This allows for more sneaky auditing, preventing someone to spot
+the program too easily and kill it.
+
+For instance, when running:
+
+```
+sudo ./egress-auditor -R '[loop25]' ...
+```
+
+a call to `ps auwx | grep egress | grep -v grep` won't return any results,
+since the process has been renamed to `[loop25]` (and hangs out with its other
+loop kernel-threads friends). 
+
+
 TODO: 
   - -C : how many cnx to capture before bailing out
   - -t: duration to capture before exiting
@@ -74,8 +89,9 @@ TODO:
 ### Inputs
 
 - [x] nflog
-- [] nfqueue
+- [] nfqueue (+ auto-allow per process ?)
 - [] ebpf
+- [] pcap (device + file)
 
 ### Outputs
 
