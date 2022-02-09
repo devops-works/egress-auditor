@@ -34,8 +34,8 @@ func (l *Output) Description() string {
 		- "loki:url:<url>": loki URL to ship logs to
 		- "loki:user:<str>": loki username for basic auth
 		- "loki:pass:<str>": loki password for basic auth
-		- "loki:xorgid:<id>": X-Org-ID header to add to loki queries (e.g. tenant)
-		- "loki:label:<key>=<value>[,<key>=<value>...]": additional labels for log entries
+		- "loki:orgid:<id>": X-Org-ID header to add to loki queries (e.g. tenant)
+		- "loki:labels:<key>=<value>[,<key>=<value>...]": additional labels for log entries
 	`
 }
 
@@ -90,7 +90,7 @@ func (l *Output) sendLog(e entry.Connection) {
 		req.SetBasicAuth(l.user, l.pass)
 	}
 	if l.xorgid != "" {
-		req.Header.Add("X-Org-ID", l.xorgid)
+		req.Header.Add("X-Scope-OrgID", l.xorgid)
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -126,10 +126,10 @@ func (l *Output) SetOption(k, v string) error {
 	case "user":
 		l.user = v
 	case "pass":
-		l.user = v
-	case "xorgid":
-		l.user = v
-	case "label":
+		l.pass = v
+	case "orgid":
+		l.xorgid = v
+	case "labels":
 		fmt.Println(k, v)
 		if l.labels == nil {
 			l.labels = make(map[string]string)

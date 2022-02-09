@@ -1,3 +1,4 @@
 egress-auditor
 /bin/
 /dist/
+*.ignore

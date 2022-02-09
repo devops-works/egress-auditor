@@ -1,0 +1,32 @@
+#
+# /etc/systemd/system/egress-auditor.service
+#
+
+[Unit]
+Description=Egress Auditor
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+WorkingDirectory=/tmp
+
+EnvironmentFile=/etc/systemd/system/egress-auditor.service.d/env.conf
+
+ExecStartPre=-iptables -D OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group ${NFGROUP}
+ExecStartPre=iptables -I OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group ${NFGROUP}
+
+ExecStart=/usr/local/bin/egress-auditor ${IN_OPTS} ${OUT_OPTS}"
+
+ExecStopPost=-iptables -D OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group ${NFGROUP}
+
+Restart=on-failure
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=egress-auditor
+
+[Install]
+WantedBy=multi-user.target
