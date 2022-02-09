@@ -1,13 +1,22 @@
 # egress-auditor
 
-Audit your egress connections and finally populate this OUTPUT chain !
-
-## Summary
-
 egress-auditor will monitor new outbound connections and generate appropriate
-iptables rules (or report, or ... depending on [output plugin](#outputs)).
+iptables rules (or logs, or ... depending on [output plugin](#outputs)).
 
 Connections can be detected using several [methods](#inputs).
+
+The goal is to audit what connections your system need to establish outside,
+and this tool can help in several scenarios:
+
+- audit egress connections and automatically display required iptables rules to
+  allow these connections;
+
+- when rules are in place, log all egress connections just before they are
+  dropped by the chain (explicitly or by the default policy) and send alerts
+  based on loki queries for instance
+
+- let only connections be established if they are initiated by specific
+  processes (TDB, requires nfqueue)
 
 This is early alpha stuff.
 
@@ -105,7 +114,7 @@ Run `egress-auditor -l` to get an up to date list and their options.
 
 - [x] nflog: captures using nflog iptable target
 - [ ] nfqueue (+ auto-allow using process filters)
-- [ ] pcap (device + file)
+- [ ] pcap (device + file, no proc info for the latter)
 - [ ] ebpf
 
 ### Outputs
@@ -122,6 +131,8 @@ Run `egress-auditor -l` to get an up to date list and their options.
 
 ## TODO
 
+- UDP
+- PTR lookups on destination ?
 - Makefile
 - goreleaser
 - pass down a logger to prevent logging mess
