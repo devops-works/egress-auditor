@@ -133,8 +133,6 @@ Run `egress-auditor -l` to get an up to date list and their options.
 
 - UDP
 - PTR lookups on destination ?
-- Makefile
-- goreleaser
 - pass down a logger to prevent logging mess
 - `-C` : how many cnx to capture before bailing out
 - `-t`: duration to capture before exiting

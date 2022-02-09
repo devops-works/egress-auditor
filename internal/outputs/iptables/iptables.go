@@ -12,11 +12,12 @@ import (
 	"github.com/devops-works/egress-auditor/internal/outputs"
 )
 
+// IPTHandler writes iptables rules matching connections seen by upstream
+// inputs
 type IPTHandler struct {
 	sync.Mutex
 	tpl       *template.Template
 	entries   map[string]entry.Connection
-	templates []*template.Template
 	verbosity int
 }
 
@@ -41,7 +42,9 @@ iptables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --dport {{ .DestPort }} -j ACC
 	return nil
 }
 
-func (nfh *IPTHandler) Description() string {
+// Description returns a description for the module, including the available
+// options
+func (e *IPTHandler) Description() string {
 	return `
 	iptables handler
 	Generates iptables rules to accomodated packet seen via hooks
@@ -54,6 +57,7 @@ func (nfh *IPTHandler) Description() string {
 	`
 }
 
+// Process starts handling connections captured by upstream inputs
 func (e *IPTHandler) Process(ctx context.Context, c <-chan entry.Connection) {
 	err := e.prepare()
 	if err != nil {
@@ -76,6 +80,7 @@ func (e *IPTHandler) Process(ctx context.Context, c <-chan entry.Connection) {
 	}
 }
 
+// generate iptable rules
 func (e *IPTHandler) generate() [][]byte {
 	e.Lock()
 	defer e.Unlock()
@@ -95,16 +100,14 @@ func (e *IPTHandler) generate() [][]byte {
 	return rules
 }
 
-// func (e *IPTHandler) Apply() error {
-// 	return nil
-// }
-
+// Cleanup any stuff that needs to be sorted out before exiting
 func (e *IPTHandler) Cleanup() {
 	for _, s := range e.generate() {
 		fmt.Println(string(s))
 	}
 }
 
+// SetOption let caller set specific module suboptions
 func (e *IPTHandler) SetOption(k, v string) error {
 	switch k {
 	case "verbose":
@@ -124,5 +127,6 @@ func (e *IPTHandler) SetOption(k, v string) error {
 }
 
 func init() {
+	// register in outputs
 	outputs.Add("iptables", &IPTHandler{})
 }

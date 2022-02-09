@@ -32,6 +32,13 @@ import (
 // 	return nil
 // }
 
+var (
+	// Version of current binary
+	Version string
+	// BuildDate of current binary
+	BuildDate string
+)
+
 func main() {
 	var (
 		opts struct {
@@ -41,6 +48,7 @@ func main() {
 			HandlerOptsFn func(string) `short:"O" long:"outopt" description:"Output option in the form <handlername>:<key>:<value>"`
 			ListFn        func()       `short:"l" long:"list" description:"list available inputs and outputs"`
 			RenameProc    string       `short:"R" long:"rename" description:"rename egress-auditor process to this name and wipe arguments in ps output"`
+			Version       func()       `short:"V" long:"version" description:"displays versions"`
 		}
 		in  []inputs.Input
 		out []outputs.Output
@@ -73,6 +81,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "* %s\n%s\n", k, h.Description())
 		}
 		os.Exit(1)
+	}
+
+	opts.Version = func() {
+		fmt.Fprintf(os.Stderr, "egress-auditor version %s (built %s)\n", Version, BuildDate)
+		os.Exit(0)
 	}
 
 	flags.Parse(&opts)

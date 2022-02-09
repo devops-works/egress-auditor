@@ -2,6 +2,7 @@ package entry
 
 import "github.com/devops-works/egress-auditor/pkg/procdetail"
 
+// Connection info passed between inputs and outputs
 type Connection struct {
 	Hook     string
 	DestIP   string

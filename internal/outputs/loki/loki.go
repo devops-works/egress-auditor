@@ -14,6 +14,7 @@ import (
 	"github.com/devops-works/egress-auditor/internal/outputs"
 )
 
+// Output writes a loki log for every connection seen by upstream inputs
 type Output struct {
 	url    string
 	user   string
@@ -22,6 +23,8 @@ type Output struct {
 	labels map[string]string
 }
 
+// Description returns a description for the module, including the available
+// options
 func (l *Output) Description() string {
 	return `
 	loki handler
@@ -36,6 +39,7 @@ func (l *Output) Description() string {
 	`
 }
 
+// Process starts handling connections captured by upstream inputs
 func (l *Output) Process(ctx context.Context, c <-chan entry.Connection) {
 	for {
 		select {
@@ -110,9 +114,11 @@ func (l *Output) sendLog(e entry.Connection) {
 	}
 }
 
+// Cleanup any stuff that needs to be sorted out before exiting
 func (l *Output) Cleanup() {
 }
 
+// SetOption let caller set specific module suboptions
 func (l *Output) SetOption(k, v string) error {
 	switch k {
 	case "url":
@@ -141,5 +147,6 @@ func (l *Output) SetOption(k, v string) error {
 }
 
 func init() {
+	// register in outputs
 	outputs.Add("loki", &Output{})
 }

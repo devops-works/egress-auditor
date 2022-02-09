@@ -8,6 +8,7 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
+// ProcessDetail contains information about processes that started connections
 type ProcessDetail struct {
 	Pid     int32
 	Name    string
@@ -16,6 +17,8 @@ type ProcessDetail struct {
 	Parent  *ProcessDetail
 }
 
+// GetOwnerOfConnection returns information about the process that initiated
+// the connection described by the quadruplet
 func GetOwnerOfConnection(sip net.IP, spp uint16, dip net.IP, dpp uint16) (*ProcessDetail, error) {
 	voidproc := &ProcessDetail{
 		Name:    "unknown",
@@ -67,6 +70,7 @@ func GetOwnerOfConnection(sip net.IP, spp uint16, dip net.IP, dpp uint16) (*Proc
 
 // }
 
+// New finds information about a process and returns a ProcessDetail
 func New(pid int32) (*ProcessDetail, error) {
 	p := &ProcessDetail{}
 

@@ -14,12 +14,15 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+// NFLog catches connections from NFLOG iptables target
 type NFLog struct {
 	Config nfl.Config
 	group  int
 	// Output outputs.Output
 }
 
+// Description returns a description for the module, including the available
+// options
 func (nfh *NFLog) Description() string {
 	return `
 	nflog iptables hook
@@ -33,6 +36,7 @@ func (nfh *NFLog) Description() string {
 	`
 }
 
+// Process starts handling connections capture
 func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 	nfh.Config = nfl.Config{
 		Group:    uint16(nfh.group),
@@ -87,11 +91,11 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 	<-ctx.Done()
 }
 
+// Cleanup any stuff that needs to be sorted out before exiting
 func (nfh *NFLog) Cleanup() {
-	// fmt.Printf("%+v\n", nfh)
-	// nfh.NfLog.Close()
 }
 
+// SetOption let caller set specific module suboptions
 func (nfh *NFLog) SetOption(k, v string) error {
 	switch k {
 	case "group":
@@ -106,5 +110,6 @@ func (nfh *NFLog) SetOption(k, v string) error {
 }
 
 func init() {
+	// register in inputs
 	inputs.Add("nflog", &NFLog{})
 }
