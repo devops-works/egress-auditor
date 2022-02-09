@@ -115,14 +115,14 @@ Run `egress-auditor -l` to get an up to date list and their options.
 ### Inputs
 
 - [x] nflog: captures using nflog iptable target
-- [] nfqueue (+ auto-allow per process ?)
-- [] ebpf
-- [] pcap (device + file)
+- [ ] nfqueue (+ auto-allow per process ?)
+- [ ] ebpf
+- [ ] pcap (device + file)
 
 ### Outputs
 
 - [x] iptables
-- [] json (file + stdout)
+- [ ] json (file + stdout)
 - [x] loki
 
 ## Caveats
