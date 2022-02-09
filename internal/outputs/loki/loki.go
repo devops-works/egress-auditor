@@ -72,8 +72,9 @@ func (l *Output) sendLog(e entry.Connection) {
 	json = strings.TrimRight(json, ",")
 
 	// add timestamp and empty message
-	json = fmt.Sprintf(`%s  }, "values": [ [ "%d", "%s" ] ] }]}`, json, time.Now().UTC().UnixNano(), "")
+	json = fmt.Sprintf(`%s  }, "values": [ [ "%d", "%s" ] ] }]}`, json, time.Now().UTC().UnixNano(), "egress detected")
 
+	// fmt.Println(json)
 	req, err := http.NewRequest(http.MethodPost, l.url+"/loki/api/v1/push", bytes.NewBuffer([]byte(json)))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[loki] error building request: %v\n", err)

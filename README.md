@@ -103,7 +103,10 @@ Then :
 - [login](http://localhost:3333/) with `admin:admin`,
 - create a [datasource](http://localhost:3333/datasources) with type 'Loki' and
   URL `http://loki:3100`
-- click save and test, and got to the Explore panel to start playing
+- click save and test, and got to the Explore panel to start playing, using
+  this query for instance: `sum by (process) (rate({destport="443"} [1m]))`
+
+![Grafana Explore](_misc/grafana.png "Grana Explore")
 
 ## Available modules
 
