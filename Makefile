@@ -21,8 +21,8 @@ export GO111MODULE=on
 all: fmt lint $(BIN) ; $(info $(M) building executable…) @ ## Build program binary
 	$Q $(GO) build \
 		-tags release \
-		-ldflags '-X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.Version=$(VERSION) -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.BuildDate=$(DATE)' \
-		-o $(BIN)/$(PACKAGE) cmd/egress-auditor/main.go
+		-ldflags '-X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
+		-o $(BIN)/$(PACKAGE) ./cmd/egress-auditor/
 
 cache-all: cache validate distributions
 
@@ -31,20 +31,20 @@ build: linux
 linux: fmt lint $(BIN) ; $(info $(M) building static executable for Linux……) @ ## Build program binary
 	$Q env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build \
 		-tags release -a \
-		-ldflags '-w -extldflags "-static" -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.Version=$(VERSION) -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.BuildDate=$(DATE)' \
-		-o $(BIN)/$(PACKAGE)-linux-amd64 cmd/egress-auditor/main.go
+		-ldflags '-w -extldflags "-static" -X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
+		-o $(BIN)/$(PACKAGE)-linux-amd64 ./cmd/egress-auditor/
 	$Q env GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GO) build \
 		-tags release -a \
-		-ldflags '-w -extldflags "-static" -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.Version=$(VERSION) -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.BuildDate=$(DATE)' \
-		-o $(BIN)/$(PACKAGE)-linux-arm64 cmd/egress-auditor/main.go
+		-ldflags '-w -extldflags "-static" -X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
+		-o $(BIN)/$(PACKAGE)-linux-arm64 ./cmd/egress-auditor/
 	$Q env GOOS=linux GOARCH=arm CGO_ENABLED=0 $(GO) build \
 		-tags release -a \
-		-ldflags '-w -extldflags "-static" -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.Version=$(VERSION) -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.BuildDate=$(DATE)' \
-		-o $(BIN)/$(PACKAGE)-linux-arm cmd/egress-auditor/main.go
+		-ldflags '-w -extldflags "-static" -X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
+		-o $(BIN)/$(PACKAGE)-linux-arm ./cmd/egress-auditor/
 	$Q env GOOS=linux GOARCH=386 CGO_ENABLED=0 $(GO) build \
 		-tags release -a \
-		-ldflags '-w -extldflags "-static" -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.Version=$(VERSION) -X github.com/devops-works/egress-auditor/cmd/egress-auditor/main.BuildDate=$(DATE)' \
-		-o $(BIN)/$(PACKAGE)-linux-386 cmd/egress-auditor/main.go
+		-ldflags '-w -extldflags "-static" -X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
+		-o $(BIN)/$(PACKAGE)-linux-386 ./cmd/egress-auditor/
 
 release: linux ; $(info $(M) stripping release executable for Linux…) @ ## Build program binary
 	$Q strip $(BIN)/$(PACKAGE)-linux-amd64
