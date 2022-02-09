@@ -17,22 +17,34 @@ type ProcessDetail struct {
 }
 
 func GetOwnerOfConnection(sip net.IP, spp uint16, dip net.IP, dpp uint16) (*ProcessDetail, error) {
+	voidproc := &ProcessDetail{
+		Name:    "unknown",
+		CmdLine: "unknown",
+		User:    "unknown",
+		Parent: &ProcessDetail{
+			Name:    "unknown",
+			CmdLine: "unknown",
+			User:    "unknown",
+			Parent:  nil,
+		},
+	}
+
 	tabs, err := netstat.TCPSocks(func(s *netstat.SockTabEntry) bool {
 		return s.LocalAddr.IP.Equal(sip) && s.RemoteAddr.IP.Equal(dip) &&
 			s.LocalAddr.Port == spp && s.RemoteAddr.Port == dpp
 	})
 	if err != nil {
-		return nil, err
+		return voidproc, err
 	}
 
 	switch len(tabs) {
 	case 0:
-		return nil, nil
+		return voidproc, nil
 	case 1:
 		// continue processing
 		break
 	default:
-		return nil, fmt.Errorf("multiple process matched")
+		return voidproc, fmt.Errorf("multiple process matched")
 	}
 
 	e := tabs[0]
@@ -40,22 +52,12 @@ func GetOwnerOfConnection(sip net.IP, spp uint16, dip net.IP, dpp uint16) (*Proc
 	// In some circumstances, process finishes really fast and can not be found in /proc
 	// This is an issue in NFLOG mode
 	if e.Process == nil {
-		return &ProcessDetail{
-			Name:    "unknown",
-			CmdLine: "unknown",
-			User:    "unknown",
-			Parent: &ProcessDetail{
-				Name:    "unknown",
-				CmdLine: "unknown",
-				User:    "unknown",
-				Parent:  nil,
-			},
-		}, nil
+		return voidproc, nil
 	}
 
 	procentry, err := New(int32(e.Process.Pid))
 	if err != nil {
-		return nil, err
+		return voidproc, err
 	}
 
 	return procentry, nil

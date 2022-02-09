@@ -116,6 +116,8 @@ func (e *IPTHandler) SetOption(k, v string) error {
 			return fmt.Errorf("wrong verbosity %d; verbosity must be between 0 and 2 included", g)
 		}
 		e.verbosity = g
+	default:
+		return fmt.Errorf("option %q unknow for iptables output", k)
 	}
 
 	return nil

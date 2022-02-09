@@ -75,24 +75,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// _, err :=
 	flags.Parse(&opts)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "error: %v", err)
-	// }
-
-	// for k, v := range ino {
-	// 	fmt.Println(k, v)
-	// }
-	// for k, v := range hao {
-	// 	fmt.Println(k, v)
-	// }
 
 	for _, h := range opts.Inputs {
 		if s, ok := inputs.Inputs[h]; ok {
 			// Set configured options for input
 			for k, v := range ino[h] {
-				s.SetOption(k, v)
+				err := s.SetOption(k, v)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "error configuring input %s: %v\n", h, err)
+					os.Exit(1)
+				}
 			}
 			in = append(in, s)
 			continue
@@ -109,12 +102,16 @@ func main() {
 		if s, ok := outputs.Outputs[h]; ok {
 			// Set configured options for output
 			for k, v := range outo[h] {
-				s.SetOption(k, v)
+				err := s.SetOption(k, v)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "error configuring output %s: %v\n", h, err)
+					os.Exit(1)
+				}
 			}
 			out = append(out, s)
 			continue
 		}
-		fmt.Fprintf(os.Stderr, "handler %s not implemented", h)
+		fmt.Fprintf(os.Stderr, "handler %s not implemented\n", h)
 	}
 
 	if len(out) == 0 {
@@ -124,7 +121,7 @@ func main() {
 
 	if opts.RenameProc != "" {
 		if len(opts.RenameProc) > len(os.Args[0]) {
-			fmt.Fprintf(os.Stderr, "unable to rename process to %q: new name must be shorter or have the same size as %q", opts.RenameProc, os.Args[0])
+			fmt.Fprintf(os.Stderr, "unable to rename process to %q: new name must be shorter or have the same size as %q\n", opts.RenameProc, os.Args[0])
 			os.Exit(1)
 		}
 		setProcessName(opts.RenameProc)
@@ -157,7 +154,7 @@ func main() {
 }
 
 func parseSubOption(m map[string]map[string]string, o string) error {
-	parts := strings.Split(o, ":")
+	parts := strings.SplitN(o, ":", 3)
 	if len(parts) != 3 {
 		return fmt.Errorf("wrong number of parts (%d) parts in option %q", len(parts), o)
 	}

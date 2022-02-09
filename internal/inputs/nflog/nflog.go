@@ -62,15 +62,15 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 			if tcp.SYN && !ip.DstIP.IsLoopback() {
 				proc, err := procdetail.GetOwnerOfConnection(ip.SrcIP, uint16(tcp.SrcPort), ip.DstIP, uint16(tcp.DstPort))
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "error getting process: %v\n", err)
+					fmt.Fprintf(os.Stderr, "unable to getting process: %v\n", err)
 				} else {
 					fmt.Fprintf(os.Stderr, "new TCP connection %s:%s -> %s:%s by %s\n", ip.SrcIP, tcp.SrcPort, ip.DstIP, tcp.DstPort, proc.Name)
-					c <- entry.Connection{
-						Hook:     "nflog",
-						DestIP:   ip.DstIP.String(),
-						DestPort: uint16(tcp.DstPort),
-						Proc:     proc,
-					}
+				}
+				c <- entry.Connection{
+					Hook:     "nflog",
+					DestIP:   ip.DstIP.String(),
+					DestPort: uint16(tcp.DstPort),
+					Proc:     proc,
 				}
 			}
 		}

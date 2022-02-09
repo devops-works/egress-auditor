@@ -83,12 +83,35 @@ sudo setcap 'cap_net_admin=+ep' ./egress-auditor
 TODO:
   - Makefile
   - goreleaser
+  - pass down a logger to prevent logging mess
+
+## Loki stack
+
+If you want to play with egress captured logs in loki, you can start a
+docker-compose stack in the _misc directory, then point egress-auditor at loki.
+
+```
+cd _misc
+docker-compose up -d
+cd ..
+sudo iptables -I OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group 100
+sudo ./egress-auditor -i nflog -I nflog:group:100 -o loki -O loki:url:http://127.0.0.1:3100 -O loki:label:test=true,lokirules=yes,fizz=buzz
+```
+
+Then :
+
+- [login](http://localhost:3333/) with `admin:admin`,
+- create a [datasource](http://localhost:3333/datasources) with type 'Loki' and
+  URL `http://loki:3100`
+- click save and test, and got to the Explore panel to start playing
 
 ## Available modules
 
+Run `egress-auditor -l` to get an up to date list and their options.
+
 ### Inputs
 
-- [x] nflog
+- [x] nflog: captures using nflog iptable target
 - [] nfqueue (+ auto-allow per process ?)
 - [] ebpf
 - [] pcap (device + file)
@@ -96,8 +119,8 @@ TODO:
 ### Outputs
 
 - [x] iptables
-- [] json
-- [] loki
+- [] json (file + stdout)
+- [x] loki
 
 ## Caveats
 
