@@ -7,12 +7,14 @@ before:
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
-  - env:
+  - id: "egress-auditor"
+    main: ./cmd/egress-auditor/
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
     ldflags:
-     - -s -w -X github.com/devops-works/egress-auditor/cmd.Version={{.Version}} -X github.com/devops-works/egress-auditor/cmd.BuildDate={{.CommitDate}}
+     - -s -w -X main.Version={{.Version}} -X main.BuildDate={{.CommitDate}}
 
 archives:
   - format: binary
