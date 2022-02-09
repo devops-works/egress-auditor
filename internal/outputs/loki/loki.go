@@ -71,7 +71,9 @@ func (l *Output) sendLog(e entry.Connection) {
 	// Remove last extraneous comma
 	json = strings.TrimRight(json, ",")
 
-	// add timestamp and empty message
+	// add timestamp and message
+	// may be add some infor about parent process ? or in tags ?
+	// having logs to read (beides labels) is also nice
 	json = fmt.Sprintf(`%s  }, "values": [ [ "%d", "%s" ] ] }]}`, json, time.Now().UTC().UnixNano(), "egress detected")
 
 	// fmt.Println(json)

@@ -61,12 +61,6 @@ a call to `ps auwx | grep egress | grep -v grep` won't return any results,
 since the process has been renamed to `[loop25]` (and hangs out with its other
 loop kernel-threads friends). 
 
-
-TODO: 
-  - -C : how many cnx to capture before bailing out
-  - -t: duration to capture before exiting
-  - -debug
-
 ## Building
 
 ```
@@ -79,11 +73,6 @@ can give it some capabilities:
 ```
 sudo setcap 'cap_net_admin=+ep' ./egress-auditor 
 ```
-
-TODO:
-  - Makefile
-  - goreleaser
-  - pass down a logger to prevent logging mess
 
 ## Loki stack
 
@@ -130,6 +119,15 @@ Run `egress-auditor -l` to get an up to date list and their options.
 - supports only TCP for now
 - when using nflog, originating process might not be found for really short
   lived connections
+
+## TODO
+
+- Makefile
+- goreleaser
+- pass down a logger to prevent logging mess
+- `-C` : how many cnx to capture before bailing out
+- `-t`: duration to capture before exiting
+- `-debug`
 
 ## Licence
 
