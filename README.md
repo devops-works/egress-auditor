@@ -115,20 +115,21 @@ Run `egress-auditor -l` to get an up to date list and their options.
 ### Inputs
 
 - [x] nflog: captures using nflog iptable target
-- [ ] nfqueue (+ auto-allow per process ?)
-- [ ] ebpf
+- [ ] nfqueue (+ auto-allow using process filters)
 - [ ] pcap (device + file)
+- [ ] ebpf
 
 ### Outputs
 
 - [x] iptables
-- [ ] json (file + stdout)
 - [x] loki
+- [ ] json (file + stdout)
 
 ## Caveats
 
 - supports only TCP for now
-- responsible process might not be found for really short lived connections
+- when using nflog, originating process might not be found for really short
+  lived connections
 
 ## Licence
 
