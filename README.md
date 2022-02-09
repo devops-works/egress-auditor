@@ -38,7 +38,7 @@ iptables -I OUTPUT -d 146.148.13.123 -p tcp -m tcp --dport 443 -j ACCEPT -m comm
 
 ## Usage
 
-See `-h` for help, and `-l` for the list of input/outpup plugins.
+See `-h` for help, and `-l` for the list of input/output plugins.
 
 In a nutshell, inputs are added using `-i`, outputs using `-o`.
 
