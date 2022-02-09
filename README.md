@@ -42,7 +42,7 @@ See `-h` for help, and `-l` for the list of input/output plugins.
 
 In a nutshell, inputs are added using `-i`, outputs using `-o`.
 
-If plugins need option, they are passed using `-I` for inputs and `-O` for
+If a plugin needs an option, they are passed using `-I` for inputs and `-O` for
 outputs. For those options, the required format is
 `pluginame:optionname:optionvalue`.
 
