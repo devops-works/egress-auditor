@@ -46,7 +46,7 @@ If a plugin needs an option, they are passed using `-I` for inputs and `-O` for
 outputs. For those options, the required format is
 `pluginame:optionname:optionvalue`.
 
-For instance, to set verbosity tp 2 for the iptables output plugin, the proper
+For instance, to set verbosity to 2 for the iptables output plugin, the proper
 invocation is:
 
 ```
@@ -76,8 +76,8 @@ loop kernel-threads friends).
 go build .
 ```
 
-If you're lazy and do not want to type `sudo` when running `egress-auditor`, you
-can give it some capabilities:
+If you're lazy and do not want to type `sudo` when running `egress-auditor`,
+you can give it some capabilities:
 
 ```
 sudo setcap 'cap_net_admin=+ep' ./egress-auditor 
