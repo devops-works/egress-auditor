@@ -3,6 +3,7 @@ package nflog
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 
@@ -20,6 +21,11 @@ type NFLog struct {
 	group  int
 	// Output outputs.Output
 }
+
+const (
+	layerIPv4 = 0x0800
+	layerIPv6 = 0x86DD
+)
 
 // Description returns a description for the module, including the available
 // options
@@ -53,32 +59,68 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 	defer nf.Close()
 
 	fn := func(m nfl.Msg) int {
-		// Just print out the id and payload of the nfqueue packet
-		// fmt.Printf("got packet\n")
-		// fmt.Printf("%+v\n", m[nfl.AttrPayload].([]byte))
-		p := gopacket.NewPacket(m[nfl.AttrPayload].([]byte), layers.LayerTypeIPv4, gopacket.Default)
+		var (
+			layerType    gopacket.LayerType
+			p            gopacket.Packet
+			srcIP, dstIP net.IP
+			ipv          uint8
+		)
 
+		proto, ok := m[nfl.AttrHwProtocol].(uint16)
+		if !ok {
+			// skip packet
+			return 0
+		}
+
+		switch proto {
+		case layerIPv4:
+			layerType = layers.LayerTypeIPv4
+		case layerIPv6:
+			layerType = layers.LayerTypeIPv6
+		default:
+			return 0
+		}
+
+		p = gopacket.NewPacket(m[nfl.AttrPayload].([]byte), layerType, gopacket.Default)
+
+		ipLayer := p.Layer(layerType)
 		tcpLayer := p.Layer(layers.LayerTypeTCP)
 		if tcpLayer != nil {
-			ipLayer := p.Layer(layers.LayerTypeIPv4)
 			tcp, _ := tcpLayer.(*layers.TCP)
-			ip, _ := ipLayer.(*layers.IPv4)
-			if tcp.SYN && !ip.DstIP.IsLoopback() {
-				proc, err := procdetail.GetOwnerOfConnection(ip.SrcIP, uint16(tcp.SrcPort), ip.DstIP, uint16(tcp.DstPort))
+
+			switch ipLayer.LayerType() {
+			case layers.LayerTypeIPv4:
+				ip, _ := ipLayer.(*layers.IPv4)
+				srcIP = ip.SrcIP
+				dstIP = ip.DstIP
+				ipv = 4
+			case layers.LayerTypeIPv6:
+				ip, _ := ipLayer.(*layers.IPv6)
+				srcIP = ip.SrcIP
+				dstIP = ip.DstIP
+				ipv = 6
+			default:
+				fmt.Println("default")
+				return 0
+			}
+
+			if tcp.SYN && !dstIP.IsLoopback() {
+				proc, err := procdetail.GetOwnerOfConnection(srcIP, uint16(tcp.SrcPort), dstIP, uint16(tcp.DstPort))
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "unable to getting process: %v\n", err)
+					fmt.Fprintf(os.Stderr, "unable to get process: %v\n", err)
 				} else {
-					fmt.Fprintf(os.Stderr, "new TCP connection %s:%s -> %s:%s by %s\n", ip.SrcIP, tcp.SrcPort, ip.DstIP, tcp.DstPort, proc.Name)
+					fmt.Fprintf(os.Stderr, "new TCP connection %s:%s -> %s:%s by %s\n", srcIP, tcp.SrcPort, dstIP, tcp.DstPort, proc.Name)
 				}
 				c <- entry.Connection{
 					Hook:     "nflog",
-					DestIP:   ip.DstIP.String(),
+					DestIP:   dstIP.String(),
 					DestPort: uint16(tcp.DstPort),
 					Proc:     proc,
+					IPv:      ipv,
 				}
 			}
+			return 0
 		}
-
 		return 0
 	}
 

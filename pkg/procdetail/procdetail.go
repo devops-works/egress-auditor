@@ -32,10 +32,26 @@ func GetOwnerOfConnection(sip net.IP, spp uint16, dip net.IP, dpp uint16) (*Proc
 		},
 	}
 
-	tabs, err := netstat.TCPSocks(func(s *netstat.SockTabEntry) bool {
-		return s.LocalAddr.IP.Equal(sip) && s.RemoteAddr.IP.Equal(dip) &&
-			s.LocalAddr.Port == spp && s.RemoteAddr.Port == dpp
-	})
+	var (
+		tabs []netstat.SockTabEntry
+		err  error
+	)
+
+	switch dip.To4() {
+	case nil:
+		// v6 address
+		tabs, err = netstat.TCP6Socks(func(s *netstat.SockTabEntry) bool {
+			return s.LocalAddr.IP.Equal(sip) && s.RemoteAddr.IP.Equal(dip) &&
+				s.LocalAddr.Port == spp && s.RemoteAddr.Port == dpp
+		})
+	default:
+		// v4 address
+		tabs, err = netstat.TCPSocks(func(s *netstat.SockTabEntry) bool {
+			return s.LocalAddr.IP.Equal(sip) && s.RemoteAddr.IP.Equal(dip) &&
+				s.LocalAddr.Port == spp && s.RemoteAddr.Port == dpp
+		})
+	}
+
 	if err != nil {
 		return voidproc, err
 	}

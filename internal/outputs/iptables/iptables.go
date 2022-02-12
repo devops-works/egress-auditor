@@ -27,12 +27,12 @@ func (e *IPTHandler) prepare() error {
 	e.entries = make(map[string]entry.Connection)
 
 	templates := []string{
-		`iptables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
+		`ip{{ if eq .IPv 6 }}6{{ end }}tables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
 		`# [{{ .Hook }}] Line generated for {{ .Proc.Name }} running as {{ .Proc.User }}"
-iptables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
+ip{{ if eq .IPv 6 }}6{{ end }}tables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
 		`# [{{ .Hook }}] Line generated for {{ .Proc.Name }} running as {{ .Proc.User }} with command "{{ .Proc.CmdLine }}"
 # [{{ .Hook }}] Parent of this process was {{ .Proc.Parent.Name }} running as {{ .Proc.Parent.User }}
-iptables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
+ip{{ if eq .IPv 6 }}6{{ end }}tables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
 	}
 
 	e.tpl, err = template.New("rule").Parse(templates[e.verbosity])

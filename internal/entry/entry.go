@@ -8,4 +8,5 @@ type Connection struct {
 	DestIP   string
 	DestPort uint16
 	Proc     *procdetail.ProcessDetail
+	IPv      uint8
 }
