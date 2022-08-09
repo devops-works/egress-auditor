@@ -93,7 +93,7 @@ cd _misc
 docker-compose up -d
 cd ..
 sudo iptables -I OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group 100
-sudo ./egress-auditor -i nflog -I nflog:group:100 -o loki -O loki:url:http://127.0.0.1:3100 -O loki:label:test=true,lokirules=yes,fizz=buzz
+sudo ./egress-auditor -i nflog -I nflog:group:100 -o loki -O loki:url:http://127.0.0.1:3100 -O loki:labels:test=true,lokirules=yes,fizz=buzz
 ```
 
 Then :
