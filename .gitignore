@@ -2,3 +2,4 @@ egress-auditor
 /bin/
 /dist/
 *.ignore
+/.vscode/

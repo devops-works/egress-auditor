@@ -106,6 +106,10 @@ Then :
 
 ![Grafana Explore](_misc/grafana.png "Grana Explore")
 
+Please note that loging to a remote Loki server might generate log lines for
+Loki itself. You might want to prevent this trafic to be matched in the NFLOG
+rule.
+
 ## Available modules
 
 Run `egress-auditor -l` to get an up to date list and their options.
