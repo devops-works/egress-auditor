@@ -53,7 +53,7 @@ invocation is:
 ... -O iptables:verbose:2
 ```
 
-Of course, this implies the iptables output module has been loaded using `-i
+Of course, this implies the iptables output module has been loaded using `-o
 iptables` in the same CLI. 
 
 The `-R` option can be used to hide `egress-auditor` and it's arguments from
@@ -113,7 +113,7 @@ Run `egress-auditor -l` to get an up to date list and their options.
 ### Inputs
 
 - [x] nflog: captures using nflog iptable target
-- [ ] nfqueue (+ auto-allow using process filters)
+- [x] nfqueue (+ auto-allow using process filters)
 - [ ] pcap (device + file, no proc info for the latter)
 - [ ] ebpf
 
