@@ -44,11 +44,12 @@ func main() {
 		opts struct {
 			Inputs        []string     `short:"i" long:"input" description:"Input to use" required:"true"`
 			Outputs       []string     `short:"o" long:"output" description:"Output to use" required:"true"`
-			HookOptsFn    func(string) `short:"I" long:"inopt" description:"Input option in the form <hookname>:<key>:<value>"`
-			HandlerOptsFn func(string) `short:"O" long:"outopt" description:"Output option in the form <handlername>:<key>:<value>"`
+			HookOptsFn    func(string) `short:"I" long:"inopt" description:"Input option in the form <inputname>:<key>:<value>"`
+			HandlerOptsFn func(string) `short:"O" long:"outopt" description:"Output option in the form <outputname>:<key>:<value>"`
 			ListFn        func()       `short:"l" long:"list" description:"list available inputs and outputs"`
 			RenameProc    string       `short:"R" long:"rename" description:"rename egress-auditor process to this name and wipe arguments in ps output"`
 			Version       func()       `short:"V" long:"version" description:"displays versions"`
+			// Count         int          `short:"C" long:"count" description:"How many packets to capture before exiting"`
 		}
 		in  []inputs.Input
 		out []outputs.Output
@@ -107,7 +108,7 @@ func main() {
 	}
 
 	if len(in) == 0 {
-		fmt.Fprintf(os.Stderr, "no hook registered; at least one is needed\n")
+		fmt.Fprintf(os.Stderr, "no input registered; at least one is needed\n")
 		os.Exit(1)
 	}
 
@@ -124,11 +125,11 @@ func main() {
 			out = append(out, s)
 			continue
 		}
-		fmt.Fprintf(os.Stderr, "handler %s not implemented\n", h)
+		fmt.Fprintf(os.Stderr, "output %s not implemented\n", h)
 	}
 
 	if len(out) == 0 {
-		fmt.Fprintf(os.Stderr, "no handler registered; at least one is needed\n")
+		fmt.Fprintf(os.Stderr, "no output registered; at least one is needed\n")
 		os.Exit(1)
 	}
 
