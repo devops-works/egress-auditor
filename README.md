@@ -36,6 +36,12 @@ new TCP connection 192.168.1.229:60166 -> 146.148.13.123:443(https) by curl
 iptables -I OUTPUT -d 146.148.13.123 -p tcp -m tcp --dport 443 -j ACCEPT -m comment --comment "curl"
 ```
 
+If you use `nftables`, you can set-up nflog target like so:
+
+```bash
+nft insert rule filter output ct state new log group 100 accept
+```
+
 ## Usage
 
 See `-h` for help, and `-l` for the list of input/output plugins.

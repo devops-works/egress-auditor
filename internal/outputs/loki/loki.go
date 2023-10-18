@@ -3,6 +3,7 @@ package loki
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -54,36 +55,51 @@ func (l *Output) Process(ctx context.Context, c <-chan entry.Connection) {
 
 // sendLog to loki
 func (l *Output) sendLog(e entry.Connection) {
-	json := `{"streams": [{ "stream": { `
-
-	for k, v := range l.labels {
-		json = fmt.Sprintf(`%s "%s": "%s",`, json, k, v)
+	type lokiStream struct {
+		Stream map[string]string `json:"stream"`
+		Values [][]string        `json:"values"`
 	}
 
-	// add labels for connection
-	json = fmt.Sprintf(`%s "%s": "%s",`, json, "destip", e.DestIP)
-	json = fmt.Sprintf(`%s "%s": "%d",`, json, "destport", e.DestPort)
-	json = fmt.Sprintf(`%s "%s": "%s",`, json, "process", e.Proc.Name)
-	json = fmt.Sprintf(`%s "%s": "%s",`, json, "user", e.Proc.User)
+	type lokiEntry struct {
+		Streams []lokiStream `json:"streams"`
+	}
+
+	// build json message
+	jsonMessage, err := json.Marshal(e)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[loki] error marshalling message: %v\n", err)
+		return
+	}
+
+	ls := lokiStream{
+		Stream: l.labels,
+		Values: [][]string{
+			{fmt.Sprintf("%d", time.Now().UTC().UnixNano()), string(jsonMessage)},
+		},
+	}
 
 	host, err := os.Hostname()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[loki] error getting hostname request: %v\n", err)
 	}
-	json = fmt.Sprintf(`%s "%s": "%s",`, json, "host", host)
 
-	// Remove last extraneous comma
-	json = strings.TrimRight(json, ",")
+	ls.Stream["host"] = host
 
-	// add timestamp and message
-	// may be add some infor about parent process ? or in tags ?
-	// having logs to read (beides labels) is also nice
-	json = fmt.Sprintf(`%s  }, "values": [ [ "%d", "%s" ] ] }]}`, json, time.Now().UTC().UnixNano(), "egress detected")
+	le := lokiEntry{
+		Streams: []lokiStream{ls},
+	}
 
-	// fmt.Println(json)
-	req, err := http.NewRequest(http.MethodPost, l.url+"/loki/api/v1/push", bytes.NewBuffer([]byte(json)))
+	js, err := json.Marshal(le)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[loki] error marshalling message: %v\n", err)
+		return
+	}
+
+	// fmt.Println(js)
+	req, err := http.NewRequest(http.MethodPost, l.url+"/loki/api/v1/push", bytes.NewBuffer([]byte(js)))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[loki] error building request: %v\n", err)
+		return
 	}
 
 	if l.user != "" {
@@ -110,7 +126,7 @@ func (l *Output) sendLog(e entry.Connection) {
 		defer resp.Body.Close()
 
 		fmt.Fprintf(os.Stderr, "[loki] error when talking to loki (returned %s): %v\n", resp.Status, string(responseBody))
-		fmt.Fprintf(os.Stderr, "[loki] request body was: %q\n", json)
+		fmt.Fprintf(os.Stderr, "[loki] request body was: %q\n", js)
 	}
 }
 
