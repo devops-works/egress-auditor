@@ -39,6 +39,9 @@ func (nfh *NFLog) Description() string {
 
 	Options:
 		- "nflog:group:<ID>": listens for packet send to nflog entry identified by this group ID
+
+	Example:
+		egress-auditor -i nflog -I nflog:group:100 ...
 	`
 }
 

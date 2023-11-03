@@ -30,13 +30,17 @@ func (l *Output) Description() string {
 	return `
 	loki handler
 	Sends logs to loki server
-	
+	This is typically used in monitoring mode after you have allow rules in place to allow legitimate trafic.
+
 	Options:
 		- "loki:url:<url>": loki URL to ship logs to
 		- "loki:user:<str>": loki username for basic auth
 		- "loki:pass:<str>": loki password for basic auth
 		- "loki:orgid:<id>": X-Org-ID header to add to loki queries (e.g. tenant)
 		- "loki:labels:<key>=<value>[,<key>=<value>...]": additional labels for log entries
+
+	Example:
+		egress-auditor -i ... -o loki -O loki:url:http://localhost:3100
 	`
 }
 

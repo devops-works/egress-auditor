@@ -47,13 +47,18 @@ ip{{ if eq .IPv 6 }}6{{ end }}tables -I OUTPUT -d {{ .DestIP }} -p tcp -m tcp --
 func (e *IPTHandler) Description() string {
 	return `
 	iptables handler
-	Generates iptables rules to accomodated packet seen via hooks
+	Generates iptables rules to accomodate packet seen from the input.
+	The rules are displayed when you stop the audit (Ctrl-C).
+	This is typically used in learning mode, where you want to see legit trafic, and create allow rules for it.
 
 	Options:
-		- "iptables:verbosity:<LVL>": sets verbosity for generated rules (0, 1 or 2)
+		- "iptables:verbose:<LVL>": sets verbosity for generated rules (0, 1 or 2)
 		     0: no comments, only the iptable command
 		     1: comments including process name and process user that triggered the connection
 		     2: like above but with parent process information
+
+	Example:
+		egress-auditor -i ... -o iptables -O iptables:verbose:1
 	`
 }
 

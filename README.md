@@ -40,6 +40,7 @@ If you use `nftables`, you can set-up nflog target like so:
 
 ```bash
 nft insert rule filter output ct state new log group 100 accept
+nft insert rule ip6 filter output ct state new log group 100 accept
 ```
 
 ## Usage
