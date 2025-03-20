@@ -1,6 +1,6 @@
 module github.com/devops-works/egress-auditor
 
-go 1.21
+go 1.24
 
 require (
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5
