@@ -137,6 +137,7 @@ Run `egress-auditor -l` to get an up to date list and their options.
 ## Caveats
 
 - supports only TCP for now
+- use `-I nflog:allow-loopback:true` to consider loopback directed traffic
 - when using nflog, originating process might not be found for really short
   lived connections
 
