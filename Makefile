@@ -18,7 +18,7 @@ export GO111MODULE=on
 .PHONY: all
 
 
-all: fmt lint $(BIN) ; $(info $(M) building executable…) @ ## Build program binary
+all: fmt $(BIN) ; $(info $(M) building executable…) @ ## Build program binary
 	$Q $(GO) build \
 		-tags release \
 		-ldflags '-X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
@@ -28,7 +28,7 @@ cache-all: cache validate distributions
 
 build: linux
 
-linux: fmt lint $(BIN) ; $(info $(M) building static executable for Linux……) @ ## Build program binary
+linux: fmt $(BIN) ; $(info $(M) building static executable for Linux……) @ ## Build program binary
 	$Q env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GO) build \
 		-tags release -a \
 		-ldflags '-w -extldflags "-static" -X main.Version=$(VERSION) -X main.BuildDate=$(DATE)' \
@@ -56,10 +56,10 @@ release: linux ; $(info $(M) stripping release executable for Linux…) @ ## Bui
 	$Q gzip $(BIN)/$(PACKAGE)-linux-386
 	$Q $(BIN)/$(PACKAGE) -version
 
-goreleaser-test: fmt lint clean ; $(info $(M) goreleaser dry-run…) @ ## Build program binary
+goreleaser-test: fmt clean ; $(info $(M) goreleaser dry-run…) @ ## Build program binary
 	goreleaser --snapshot --skip-publish --rm-dist
 
-goreleaser: fmt lint clean test; $(info $(M) create a release with goreleaser…) @ ## Build program binary
+goreleaser: fmt clean test; $(info $(M) create a release with goreleaser…) @ ## Build program binary
 	goreleaser --rm-dist
 
 # Tools
@@ -68,27 +68,8 @@ $(BIN):
 	@mkdir -p $@
 $(BIN)/%: | $(BIN) ; $(info $(M) building $(REPOSITORY)…)
 	$Q tmp=$$(mktemp -d); \
-	   env GO111MODULE=off GOPATH=$$tmp GOBIN=$(BIN) $(GO) get $(REPOSITORY) \
-		|| ret=$$?; \
-	   rm -rf $$tmp ; exit $$ret
-
-GOLINT = $(BIN)/golint
-$(BIN)/golint: REPOSITORY=golang.org/x/lint/golint
-
-GOCOVMERGE = $(BIN)/gocovmerge
-$(BIN)/gocovmerge: REPOSITORY=github.com/wadey/gocovmerge
-
-GOCOV = $(BIN)/gocov
-$(BIN)/gocov: REPOSITORY=github.com/axw/gocov/...
-
-GOCOVXML = $(BIN)/gocov-xml
-$(BIN)/gocov-xml: REPOSITORY=github.com/AlekSi/gocov-xml
-
-GO2XUNIT = $(BIN)/go2xunit
-$(BIN)/go2xunit: REPOSITORY=github.com/tebeka/go2xunit
-
-GOMODOUTDATED = $(BIN)/go-mod-outdated
-$(BIN)/go-mod-outdated: REPOSITORY=github.com/psampaz/go-mod-outdated
+	   env GO111MODULE=on GOPATH=$$tmp GOBIN=$(BIN) $(GO) get $(REPOSITORY) \
+		|| ret=$$?; exit $$ret
 
 # Tests
 
@@ -100,10 +81,10 @@ test-verbose: ARGS=-v            ## Run tests in verbose mode with coverage repo
 test-race:    ARGS=-race         ## Run tests with race detector
 $(TEST_TARGETS): NAME=$(MAKECMDGOALS:test-%=%)
 $(TEST_TARGETS): test
-test tests: fmt lint ; $(info $(M) running $(NAME:%=% )tests…) @ ## Run tests
+test tests: fmt ; $(info $(M) running $(NAME:%=% )tests…) @ ## Run tests
 	$Q $(GO) test -timeout $(TIMEOUT)s $(ARGS) $(TESTPKGS)
 
-test-xml: fmt lint | $(GO2XUNIT) ; $(info $(M) running $(NAME:%=% )tests…) @ ## Run tests with xUnit output
+test-xml: fmt | $(GO2XUNIT) ; $(info $(M) running $(NAME:%=% )tests…) @ ## Run tests with xUnit output
 	$Q mkdir -p test
 	$Q 2>&1 $(GO) test -timeout 20s -v $(TESTPKGS) | tee test/tests.output
 	$(GO2XUNIT) -fail -input test/tests.output -output test/tests.xml
@@ -115,7 +96,7 @@ COVERAGE_HTML = $(COVERAGE_DIR)/index.html
 .PHONY: test-coverage test-coverage-tools
 test-coverage-tools: | $(GOCOVMERGE) $(GOCOV) $(GOCOVXML)
 test-coverage: COVERAGE_DIR := $(CURDIR)/test/coverage.$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-test-coverage: fmt lint test-coverage-tools ; $(info $(M) running coverage tests…) @ ## Run coverage tests
+test-coverage: fmt test-coverage-tools ; $(info $(M) running coverage tests…) @ ## Run coverage tests
 	$Q mkdir -p $(COVERAGE_DIR)/coverage
 	$Q for pkg in $(TESTPKGS); do \
 		$(GO) test \
@@ -128,10 +109,6 @@ test-coverage: fmt lint test-coverage-tools ; $(info $(M) running coverage tests
 	$Q $(GOCOVMERGE) $(COVERAGE_DIR)/coverage/*.cover > $(COVERAGE_PROFILE)
 	$Q $(GO) tool cover -html=$(COVERAGE_PROFILE) -o $(COVERAGE_HTML)
 	$Q $(GOCOV) convert $(COVERAGE_PROFILE) | $(GOCOVXML) > $(COVERAGE_XML)
-
-.PHONY: lint
-lint: | $(GOLINT) ; $(info $(M) running golint…) @ ## Run golint
-	$Q $(GOLINT) -set_exit_status $(PKGS)
 
 .PHONY: outdated
 outdated: | $(GOMODOUTDATED) ; $(info $(M) running go-mod-outdated…) @ ## Run go-mod-outdated
