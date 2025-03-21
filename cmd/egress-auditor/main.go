@@ -16,21 +16,8 @@ import (
 	"github.com/devops-works/egress-auditor/internal/outputs"
 	_ "github.com/devops-works/egress-auditor/internal/outputs/all"
 
-	// nflog "github.com/florianl/go-nflog"
-
 	flags "github.com/jessevdk/go-flags"
 )
-
-// type strslice []string
-
-// func (s *strslice) String() string {
-// 	return strings.Join(*s, ",")
-// }
-
-// func (s *strslice) Set(v string) error {
-// 	*s = append(*s, v)
-// 	return nil
-// }
 
 var (
 	// Version of current binary
@@ -43,13 +30,13 @@ func main() {
 	var (
 		opts struct {
 			Inputs        []string     `short:"i" long:"input" description:"Input to use" required:"true"`
-			Outputs       []string     `short:"o" long:"output" description:"Output to use" required:"true"`
+			Outputs       []string     `short:"o" long:"output" description:"Output to use"`
 			HookOptsFn    func(string) `short:"I" long:"inopt" description:"Input option in the form <inputname>:<key>:<value>"`
 			HandlerOptsFn func(string) `short:"O" long:"outopt" description:"Output option in the form <outputname>:<key>:<value>"`
 			ListFn        func()       `short:"l" long:"list" description:"list available inputs and outputs"`
 			RenameProc    string       `short:"R" long:"rename" description:"rename egress-auditor process to this name and wipe arguments in ps output"`
 			Version       func()       `short:"V" long:"version" description:"displays versions"`
-			// Count         int          `short:"C" long:"count" description:"How many packets to capture before exiting"`
+			MonitorOnly   bool         `short:"m" long:"monitor-only" description:"print NFLOG content only"`
 		}
 		in  []inputs.Input
 		out []outputs.Output
@@ -128,7 +115,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "output %s not implemented\n", h)
 	}
 
-	if len(out) == 0 {
+	if len(out) == 0 && !opts.MonitorOnly {
 		fmt.Fprintf(os.Stderr, "no output registered; at least one is needed\n")
 		os.Exit(1)
 	}
@@ -154,9 +141,11 @@ func main() {
 	}
 
 	// Register outputs
-	for o := range out {
-		go out[o].Process(ctx, entriesChan)
-		defer out[o].Cleanup()
+	if !opts.MonitorOnly {
+		for o := range out {
+			go out[o].Process(ctx, entriesChan)
+			defer out[o].Cleanup()
+		}
 	}
 
 	// Wait for ctrl-c
