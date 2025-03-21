@@ -68,27 +68,8 @@ $(BIN):
 	@mkdir -p $@
 $(BIN)/%: | $(BIN) ; $(info $(M) building $(REPOSITORY)…)
 	$Q tmp=$$(mktemp -d); \
-	   env GO111MODULE=off GOPATH=$$tmp GOBIN=$(BIN) $(GO) get $(REPOSITORY) \
-		|| ret=$$?; \
-	   rm -rf $$tmp ; exit $$ret
-
-GOLINT = $(BIN)/golint
-$(BIN)/golint: REPOSITORY=golang.org/x/lint/golint
-
-GOCOVMERGE = $(BIN)/gocovmerge
-$(BIN)/gocovmerge: REPOSITORY=github.com/wadey/gocovmerge
-
-GOCOV = $(BIN)/gocov
-$(BIN)/gocov: REPOSITORY=github.com/axw/gocov/...
-
-GOCOVXML = $(BIN)/gocov-xml
-$(BIN)/gocov-xml: REPOSITORY=github.com/AlekSi/gocov-xml
-
-GO2XUNIT = $(BIN)/go2xunit
-$(BIN)/go2xunit: REPOSITORY=github.com/tebeka/go2xunit
-
-GOMODOUTDATED = $(BIN)/go-mod-outdated
-$(BIN)/go-mod-outdated: REPOSITORY=github.com/psampaz/go-mod-outdated
+	   env GO111MODULE=on GOPATH=$$tmp GOBIN=$(BIN) $(GO) get $(REPOSITORY) \
+		|| ret=$$?; exit $$ret
 
 # Tests
 
