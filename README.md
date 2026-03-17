@@ -43,6 +43,15 @@ nft insert rule filter output ct state new log group 100 accept
 nft insert rule ip6 filter output ct state new log group 100 accept
 ```
 
+or:
+
+```bash
+nft insert rule ip filter OUTPUT ct state new log group 100 accept
+nft insert rule ip6 filter OUTPUT ct state new log group 100 accept
+```
+
+depending on your tables setup.
+
 ## Usage
 
 See `-h` for help, and `-l` for the list of input/output plugins.
