@@ -39,15 +39,15 @@ iptables -I OUTPUT -d 146.148.13.123 -p tcp -m tcp --dport 443 -j ACCEPT -m comm
 If you use `nftables`, you can set-up nflog target like so:
 
 ```bash
-nft insert rule filter output ct state new log group 100 accept
-nft insert rule ip6 filter output ct state new log group 100 accept
+nft add rule filter output ct state new log group 100 accept
+nft add rule ip6 filter output ct state new log group 100 accept
 ```
 
 or:
 
 ```bash
-nft insert rule ip filter OUTPUT ct state new log group 100 accept
-nft insert rule ip6 filter OUTPUT ct state new log group 100 accept
+nft add rule ip filter OUTPUT ct state new log group 100 accept
+nft add rule ip6 filter OUTPUT ct state new log group 100 accept
 ```
 
 depending on your tables setup.
@@ -141,7 +141,34 @@ Run `egress-auditor -l` to get an up to date list and their options.
 
 - [x] iptables
 - [x] loki
-- [ ] json (file + stdout)
+- [x] logfmt (stdout or file, with SIGHUP support for log rotation)
+
+## Logfmt output and log rotation
+
+The logfmt output writes one line per connection in
+[logfmt](https://brandur.org/logfmt) format. By default it writes to stdout,
+but can be directed to a file:
+
+```
+sudo ./egress-auditor -i nflog -I nflog:group:100 -o logfmt -O logfmt:file:/var/log/egress.log
+```
+
+When writing to a file, the logfmt output handles `SIGHUP` by closing and
+reopening the file. This makes it compatible with logrotate. Example logrotate
+configuration:
+
+```
+/var/log/egress.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    postrotate
+        kill -HUP $(pidof egress-auditor) 2>/dev/null || true
+    endscript
+}
+```
 
 ## Caveats
 

@@ -36,7 +36,6 @@ func main() {
 			ListFn        func()       `short:"l" long:"list" description:"list available inputs and outputs"`
 			RenameProc    string       `short:"R" long:"rename" description:"rename egress-auditor process to this name and wipe arguments in ps output"`
 			Version       func()       `short:"V" long:"version" description:"displays versions"`
-			MonitorOnly   bool         `short:"m" long:"monitor-only" description:"print NFLOG content only"`
 		}
 		in  []inputs.Input
 		out []outputs.Output
@@ -115,7 +114,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "output %s not implemented\n", h)
 	}
 
-	if len(out) == 0 && !opts.MonitorOnly {
+	if len(out) == 0 {
 		fmt.Fprintf(os.Stderr, "no output registered; at least one is needed\n")
 		os.Exit(1)
 	}
@@ -141,11 +140,9 @@ func main() {
 	}
 
 	// Register outputs
-	if !opts.MonitorOnly {
-		for o := range out {
-			go out[o].Process(ctx, entriesChan)
-			defer out[o].Cleanup()
-		}
+	for o := range out {
+		go out[o].Process(ctx, entriesChan)
+		defer out[o].Cleanup()
 	}
 
 	// Wait for ctrl-c
