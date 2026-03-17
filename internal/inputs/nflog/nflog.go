@@ -20,6 +20,7 @@ type NFLog struct {
 	Config        nfl.Config
 	group         int
 	allowLoopback bool
+	quiet         bool
 	// Output outputs.Output
 }
 
@@ -41,6 +42,7 @@ func (nfh *NFLog) Description() string {
 	Options:
 		- "nflog:group:<ID>": listens for packet send to nflog entry identified by this group ID
 		- "nflog:allow-loopback:<false|true>": whether to check on loopback traffic or not
+		- "nflog:quiet:<false|true>": suppress per-connection messages on stderr
 
 	Example:
 		egress-auditor -i nflog -I nflog:group:100 ...
@@ -114,7 +116,7 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 				proc, err := procdetail.GetOwnerOfConnection(srcIP, uint16(tcp.SrcPort), dstIP, uint16(tcp.DstPort))
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "unable to get process: %v\n", err)
-				} else {
+				} else if !nfh.quiet {
 					fmt.Fprintf(os.Stderr, "new TCP connection %s:%s -> %s:%s by %s\n", srcIP, tcp.SrcPort, dstIP, tcp.DstPort, proc.Name)
 				}
 				c <- entry.Connection{
@@ -160,6 +162,12 @@ func (nfh *NFLog) SetOption(k, v string) error {
 		}
 		nfh.allowLoopback = a
 		fmt.Fprintf(os.Stderr, "setting allowing-loopback to %t\n", nfh.allowLoopback)
+	case "quiet":
+		q, err := strconv.ParseBool(v)
+		if err != nil {
+			return err
+		}
+		nfh.quiet = q
 	}
 	return nil
 }

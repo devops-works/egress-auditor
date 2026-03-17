@@ -150,8 +150,12 @@ The logfmt output writes one line per connection in
 but can be directed to a file:
 
 ```
-sudo ./egress-auditor -i nflog -I nflog:group:100 -o logfmt -O logfmt:file:/var/log/egress.log
+sudo ./egress-auditor -i nflog -I nflog:group:100 -I nflog:quiet:true -o logfmt -O logfmt:file:/var/log/egress.log
 ```
+
+Use `-I nflog:quiet:true` to suppress the per-connection messages that nflog
+prints to stderr, since the logfmt output already captures all connection
+details.
 
 When writing to a file, the logfmt output handles `SIGHUP` by closing and
 reopening the file. This makes it compatible with logrotate. Example logrotate
