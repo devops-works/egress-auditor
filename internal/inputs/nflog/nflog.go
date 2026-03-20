@@ -38,6 +38,7 @@ func (nfh *NFLog) Description() string {
 	Add iptable rules like so:
 
 		sudo iptables -I OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group 100
+		sudo iptables -I OUTPUT -m state --state NEW -p udp -j NFLOG --nflog-group 100
 
 	Options:
 		- "nflog:group:<ID>": listens for packet send to nflog entry identified by this group ID
@@ -91,10 +92,8 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 		p = gopacket.NewPacket(m[nfl.AttrPayload].([]byte), layerType, gopacket.Default)
 
 		ipLayer := p.Layer(layerType)
-		tcpLayer := p.Layer(layers.LayerTypeTCP)
-		if tcpLayer != nil {
-			tcp, _ := tcpLayer.(*layers.TCP)
-
+		// helper to extract IPs from the IP layer
+		extractIPs := func() bool {
 			switch ipLayer.LayerType() {
 			case layers.LayerTypeIPv4:
 				ip, _ := ipLayer.(*layers.IPv4)
@@ -107,22 +106,52 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 				dstIP = ip.DstIP
 				ipv = 6
 			default:
-				fmt.Println("default")
+				return false
+			}
+			return true
+		}
+
+		if tcpLayer := p.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+			tcp, _ := tcpLayer.(*layers.TCP)
+			if !extractIPs() {
 				return 0
 			}
-
 			if tcp.SYN && (!dstIP.IsLoopback() || nfh.allowLoopback) {
-				// if tcp.SYN && (!dstIP.IsLoopback() || (nfh.allowLoopback && dstIP.IsLoopback())) {
-				proc, err := procdetail.GetOwnerOfConnection(srcIP, uint16(tcp.SrcPort), dstIP, uint16(tcp.DstPort))
+				proc, err := procdetail.GetOwnerOfConnection("tcp", srcIP, uint16(tcp.SrcPort), dstIP, uint16(tcp.DstPort))
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "unable to get process: %v\n", err)
 				} else if !nfh.quiet {
-					fmt.Fprintf(os.Stderr, "new TCP connection %s:%s -> %s:%s by %s\n", srcIP, tcp.SrcPort, dstIP, tcp.DstPort, proc.Name)
+					fmt.Fprintf(os.Stderr, "new tcp connection %s:%s -> %s:%s by %s\n", srcIP, tcp.SrcPort, dstIP, tcp.DstPort, proc.Name)
 				}
 				c <- entry.Connection{
 					Hook:     "nflog",
+					Protocol: "tcp",
 					DestIP:   dstIP.String(),
 					DestPort: uint16(tcp.DstPort),
+					Proc:     proc,
+					IPv:      ipv,
+				}
+			}
+			return 0
+		}
+
+		if udpLayer := p.Layer(layers.LayerTypeUDP); udpLayer != nil {
+			udp, _ := udpLayer.(*layers.UDP)
+			if !extractIPs() {
+				return 0
+			}
+			if !dstIP.IsLoopback() || nfh.allowLoopback {
+				proc, err := procdetail.GetOwnerOfConnection("udp", srcIP, uint16(udp.SrcPort), dstIP, uint16(udp.DstPort))
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "unable to get process: %v\n", err)
+				} else if !nfh.quiet {
+					fmt.Fprintf(os.Stderr, "new udp connection %s:%s -> %s:%s by %s\n", srcIP, udp.SrcPort, dstIP, udp.DstPort, proc.Name)
+				}
+				c <- entry.Connection{
+					Hook:     "nflog",
+					Protocol: "udp",
+					DestIP:   dstIP.String(),
+					DestPort: uint16(udp.DstPort),
 					Proc:     proc,
 					IPv:      ipv,
 				}

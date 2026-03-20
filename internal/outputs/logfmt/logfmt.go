@@ -80,9 +80,10 @@ func quoteIfNeeded(s string) string {
 func (o *Output) print(e entry.Connection) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	fmt.Fprintf(o.w, "ts=%s hook=%s dest_ip=%s dest_port=%d ip_version=%d proc_name=%s proc_pid=%d proc_user=%s proc_cmdline=%s parent_name=%s parent_pid=%d parent_user=%s\n",
+	fmt.Fprintf(o.w, "ts=%s hook=%s protocol=%s dest_ip=%s dest_port=%d ip_version=%d proc_name=%s proc_pid=%d proc_user=%s proc_cmdline=%s parent_name=%s parent_pid=%d parent_user=%s\n",
 		time.Now().UTC().Format(time.RFC3339),
 		e.Hook,
+		e.Protocol,
 		e.DestIP,
 		e.DestPort,
 		e.IPv,

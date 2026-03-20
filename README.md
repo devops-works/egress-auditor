@@ -18,13 +18,14 @@ and this tool can help in several scenarios:
 - let only connections be established if they are initiated by specific
   processes (TDB, requires nfqueue)
 
-This is early alpha stuff.
+This is alpha stuff.
 
 ## Quick start
 
 ```bash
-# add an iptable rules on OUTPUT to send new connections to NFLOG
+# add iptable rules on OUTPUT to send new connections to NFLOG
 sudo iptables -I OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group 100
+sudo iptables -I OUTPUT -m state --state NEW -p udp -j NFLOG --nflog-group 100
 go build . 
 # start egress-auditor using the nflog input and the same group id used in iptables
 sudo ./egress-auditor -i nflog -I nflog:group:100 -o iptables -O iptables:verbose:2
@@ -109,6 +110,7 @@ cd _misc
 docker-compose up -d
 cd ..
 sudo iptables -I OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group 100
+sudo iptables -I OUTPUT -m state --state NEW -p udp -j NFLOG --nflog-group 100
 sudo ./egress-auditor -i nflog -I nflog:group:100 -o loki -O loki:url:http://127.0.0.1:3100 -O loki:labels:test=true,lokirules=yes,fizz=buzz
 ```
 
@@ -176,14 +178,12 @@ configuration:
 
 ## Caveats
 
-- supports only TCP for now
 - use `-I nflog:allow-loopback:true` to consider loopback directed traffic
 - when using nflog, originating process might not be found for really short
   lived connections
 
 ## TODO
 
-- UDP
 - PTR lookups on destination ?
 - pass down a logger to prevent logging mess
 - `-C` : how many cnx to capture before bailing out

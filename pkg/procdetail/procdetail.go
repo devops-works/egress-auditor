@@ -18,8 +18,8 @@ type ProcessDetail struct {
 }
 
 // GetOwnerOfConnection returns information about the process that initiated
-// the connection described by the quadruplet
-func GetOwnerOfConnection(sip net.IP, spp uint16, dip net.IP, dpp uint16) (*ProcessDetail, error) {
+// the connection described by the quadruplet. Protocol should be "tcp" or "udp".
+func GetOwnerOfConnection(protocol string, sip net.IP, spp uint16, dip net.IP, dpp uint16) (*ProcessDetail, error) {
 	voidproc := &ProcessDetail{
 		Name:    "unknown",
 		CmdLine: "unknown",
@@ -37,19 +37,20 @@ func GetOwnerOfConnection(sip net.IP, spp uint16, dip net.IP, dpp uint16) (*Proc
 		err  error
 	)
 
-	switch dip.To4() {
-	case nil:
-		// v6 address
-		tabs, err = netstat.TCP6Socks(func(s *netstat.SockTabEntry) bool {
-			return s.LocalAddr.IP.Equal(sip) && s.RemoteAddr.IP.Equal(dip) &&
-				s.LocalAddr.Port == spp && s.RemoteAddr.Port == dpp
-		})
+	filter := func(s *netstat.SockTabEntry) bool {
+		return s.LocalAddr.IP.Equal(sip) && s.RemoteAddr.IP.Equal(dip) &&
+			s.LocalAddr.Port == spp && s.RemoteAddr.Port == dpp
+	}
+
+	switch {
+	case protocol == "udp" && dip.To4() == nil:
+		tabs, err = netstat.UDP6Socks(filter)
+	case protocol == "udp":
+		tabs, err = netstat.UDPSocks(filter)
+	case dip.To4() == nil:
+		tabs, err = netstat.TCP6Socks(filter)
 	default:
-		// v4 address
-		tabs, err = netstat.TCPSocks(func(s *netstat.SockTabEntry) bool {
-			return s.LocalAddr.IP.Equal(sip) && s.RemoteAddr.IP.Equal(dip) &&
-				s.LocalAddr.Port == spp && s.RemoteAddr.Port == dpp
-		})
+		tabs, err = netstat.TCPSocks(filter)
 	}
 
 	if err != nil {
