@@ -10,7 +10,7 @@ import (
 	"github.com/devops-works/egress-auditor/internal/entry"
 	"github.com/devops-works/egress-auditor/internal/inputs"
 	"github.com/devops-works/egress-auditor/pkg/procdetail"
-	nfl "github.com/florianl/go-nflog"
+	nfl "github.com/florianl/go-nflog/v2"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
@@ -54,7 +54,7 @@ func (nfh *NFLog) Description() string {
 func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 	nfh.Config = nfl.Config{
 		Group:    uint16(nfh.group),
-		Copymode: nfl.NfUlnlCopyPacket,
+		Copymode: nfl.CopyPacket,
 	}
 
 	nf, err := nfl.Open(&nfh.Config)
@@ -66,7 +66,7 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 
 	defer nf.Close()
 
-	fn := func(m nfl.Msg) int {
+	fn := func(a nfl.Attribute) int {
 		var (
 			layerType    gopacket.LayerType
 			p            gopacket.Packet
@@ -74,13 +74,11 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 			ipv          uint8
 		)
 
-		proto, ok := m[nfl.AttrHwProtocol].(uint16)
-		if !ok {
-			// skip packet
+		if a.HwProtocol == nil || a.Payload == nil {
 			return 0
 		}
 
-		switch proto {
+		switch *a.HwProtocol {
 		case layerIPv4:
 			layerType = layers.LayerTypeIPv4
 		case layerIPv6:
@@ -89,7 +87,7 @@ func (nfh *NFLog) Process(ctx context.Context, c chan<- entry.Connection) {
 			return 0
 		}
 
-		p = gopacket.NewPacket(m[nfl.AttrPayload].([]byte), layerType, gopacket.Default)
+		p = gopacket.NewPacket(*a.Payload, layerType, gopacket.Default)
 
 		ipLayer := p.Layer(layerType)
 		// helper to extract IPs from the IP layer

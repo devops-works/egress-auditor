@@ -41,8 +41,8 @@ func main() {
 		out []outputs.Output
 	)
 
-	ino := map[string]map[string]string{}
-	outo := map[string]map[string]string{}
+	ino := map[string]map[string][]string{}
+	outo := map[string]map[string][]string{}
 
 	opts.HookOptsFn = func(o string) {
 		err := parseSubOption(ino, o)
@@ -79,12 +79,16 @@ func main() {
 
 	for _, h := range opts.Inputs {
 		if s, ok := inputs.Inputs[h]; ok {
-			// Set configured options for input
-			for k, v := range ino[h] {
-				err := s.SetOption(k, v)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "error configuring input %s: %v\n", h, err)
-					os.Exit(1)
+			// Set configured options for input. SetOption is called once
+			// per -I flag, in argv order, so options that accumulate (e.g.
+			// ignore-cidr, ignore-comm) see every value.
+			for k, vs := range ino[h] {
+				for _, v := range vs {
+					err := s.SetOption(k, v)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "error configuring input %s: %v\n", h, err)
+						os.Exit(1)
+					}
 				}
 			}
 			in = append(in, s)
@@ -100,12 +104,15 @@ func main() {
 
 	for _, h := range opts.Outputs {
 		if s, ok := outputs.Outputs[h]; ok {
-			// Set configured options for output
-			for k, v := range outo[h] {
-				err := s.SetOption(k, v)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "error configuring output %s: %v\n", h, err)
-					os.Exit(1)
+			// Set configured options for output. SetOption is called once
+			// per -O flag so options that accumulate see every value.
+			for k, vs := range outo[h] {
+				for _, v := range vs {
+					err := s.SetOption(k, v)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "error configuring output %s: %v\n", h, err)
+						os.Exit(1)
+					}
 				}
 			}
 			out = append(out, s)
@@ -153,15 +160,15 @@ func main() {
 	cancel()
 }
 
-func parseSubOption(m map[string]map[string]string, o string) error {
+func parseSubOption(m map[string]map[string][]string, o string) error {
 	parts := strings.SplitN(o, ":", 3)
 	if len(parts) != 3 {
 		return fmt.Errorf("wrong number of parts (%d) parts in option %q", len(parts), o)
 	}
 	if m[parts[0]] == nil {
-		m[parts[0]] = make(map[string]string)
+		m[parts[0]] = make(map[string][]string)
 	}
-	m[parts[0]][parts[1]] = parts[2]
+	m[parts[0]][parts[1]] = append(m[parts[0]][parts[1]], parts[2])
 	return nil
 }
 

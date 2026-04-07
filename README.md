@@ -135,15 +135,74 @@ Run `egress-auditor -l` to get an up to date list and their options.
 ### Inputs
 
 - [x] nflog: captures using nflog iptable target
+- [x] ebpf: captures using kprobes on tcp_*_connect / udp[v6]_sendmsg
 - [x] nfqueue (+ auto-allow using process filters)
 - [ ] pcap (device + file, no proc info for the latter)
-- [ ] ebpf
 
 ### Outputs
 
 - [x] iptables
 - [x] loki
 - [x] logfmt (stdout or file, with SIGHUP support for log rotation)
+
+## eBPF input
+
+The `ebpf` input is an alternative to `nflog` that does not require any
+iptables/nftables rules. It attaches kprobes to `tcp_v4_connect`,
+`tcp_v6_connect`, `udp_sendmsg`, and `udpv6_sendmsg`, capturing the
+originating process PID directly from the kernel context. This eliminates
+the race against `/proc/net/tcp` that nflog suffers from for short-lived
+processes.
+
+```
+sudo ./egress-auditor -i ebpf -o logfmt
+```
+
+Requirements:
+- Linux kernel with kprobe support (any 4.x+)
+- `CAP_BPF` and `CAP_PERFMON` (or root) at runtime
+- To **build** the eBPF object code: `clang` and `libbpf-dev`. After cloning,
+  run `go generate ./internal/inputs/ebpf/` to compile the eBPF program and
+  generate the Go bindings. The resulting `bpf_bpfel.go`, `bpf_bpfeb.go`,
+  `bpf_bpfel.o`, `bpf_bpfeb.o` files are committed in the repo, so plain
+  `go build` works without clang.
+
+Options:
+- `-I ebpf:quiet:true` — suppress per-connection messages on stderr
+- `-I ebpf:allow-loopback:true` — include loopback traffic
+- `-I ebpf:ignore-cidr:<CIDR>` — drop events whose dest IP is in this network
+  (may be repeated, IPv4 or IPv6)
+- `-I ebpf:ignore-port:<port>` — drop events with this dest port (may be repeated)
+- `-I ebpf:ignore-comm:<name>` — drop events from this process name
+  (matched against the resolved `/proc` name; may be repeated; supports
+  glob wildcards `*`, `?`, `[...]` — e.g. `chrome*`, `*-worker`)
+
+### Filtering: nflog vs ebpf
+
+With `nflog`, you bypass uninteresting traffic by simply not matching it in
+iptables (the kernel's packet classifier handles it for free):
+
+```
+iptables -I OUTPUT -d 10.0.0.0/8 -j ACCEPT
+iptables -A OUTPUT -m state --state NEW -p tcp -j NFLOG --nflog-group 100
+```
+
+With `ebpf` there is no equivalent kernel classifier — kprobes fire for every
+outgoing connection — so the same intent is expressed via `ignore-*` options:
+
+```
+sudo ./egress-auditor -i ebpf -o logfmt \
+    -I ebpf:ignore-cidr:10.0.0.0/8 \
+    -I ebpf:ignore-cidr:192.168.0.0/16 \
+    -I ebpf:ignore-cidr:fe80::/10 \
+    -I ebpf:ignore-port:53 \
+    -I ebpf:ignore-comm:chronyd
+```
+
+Filtering happens in Go userspace after the eBPF event is read. For an audit
+tool this is fine; if you need wire-speed filtering for very high event rates,
+the natural next step is to push these rules into the eBPF program via BPF
+maps (LPM trie for CIDRs, hash for ports). Not implemented yet.
 
 ## Logfmt output and log rotation
 
