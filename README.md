@@ -176,6 +176,11 @@ Options:
 - `-I ebpf:ignore-comm:<name>` — drop events from this process name
   (matched against the resolved `/proc` name; may be repeated; supports
   glob wildcards `*`, `?`, `[...]` — e.g. `chrome*`, `*-worker`)
+- `-I ebpf:ignore-cmdline:<pattern>` — drop events whose full command line
+  matches this pattern (substring match by default; with glob wildcards
+  `*` crosses any character including `/` — e.g. `*/unbound*`, `syncthing`)
+- `-I ebpf:ignore-parent:<name>` — drop events whose parent process name
+  matches (same syntax as `ignore-comm`: exact or glob)
 
 ### Filtering: nflog vs ebpf
 

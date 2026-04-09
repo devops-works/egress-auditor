@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -56,6 +57,12 @@ type Input struct {
 	ignoreComms     map[string]struct{} // exact matches (fast path)
 	ignoreCommGlobs []string            // glob patterns (path.Match syntax)
 
+	ignoreCmdlines     []string         // plain substring matches
+	ignoreCmdlineGlobs []*regexp.Regexp // compiled glob-to-regex patterns
+
+	ignoreParents     map[string]struct{} // exact parent name matches
+	ignoreParentGlobs []string            // glob patterns for parent name
+
 	objs  bpfObjects
 	links []link.Link
 
@@ -86,13 +93,19 @@ func (e *Input) Description() string {
 		- "ebpf:ignore-comm:<name>": drop events from this process name
 		    (matched against the resolved /proc name; may be specified multiple
 		    times; supports glob wildcards * ? [...] e.g. "chrome*", "*-worker")
+		- "ebpf:ignore-cmdline:<pattern>": drop events whose full command line
+		    matches this pattern (substring match by default; supports glob
+		    wildcards * ? [...] where * crosses any character including /)
+		- "ebpf:ignore-parent:<name>": drop events whose parent process name
+		    matches (same syntax as ignore-comm: exact or glob)
 
 	Example:
 		sudo egress-auditor -i ebpf -o logfmt \
 		    -I ebpf:ignore-cidr:10.0.0.0/8 \
 		    -I ebpf:ignore-cidr:192.168.0.0/16 \
 		    -I ebpf:ignore-port:53 \
-		    -I ebpf:ignore-comm:chronyd
+		    -I ebpf:ignore-comm:chronyd \
+		    -I ebpf:ignore-cmdline:'/usr/sbin/unbound*'
 	`
 }
 
@@ -142,10 +155,67 @@ func (e *Input) SetOption(k, v string) error {
 			}
 			e.ignoreComms[v] = struct{}{}
 		}
+	case "ignore-cmdline":
+		if v == "" {
+			return fmt.Errorf("ignore-cmdline requires a non-empty value")
+		}
+		if strings.ContainsAny(v, "*?[") {
+			re, err := regexp.Compile("^" + globToRegex(v) + "$")
+			if err != nil {
+				return fmt.Errorf("invalid ignore-cmdline pattern %q: %w", v, err)
+			}
+			e.ignoreCmdlineGlobs = append(e.ignoreCmdlineGlobs, re)
+		} else {
+			e.ignoreCmdlines = append(e.ignoreCmdlines, v)
+		}
+	case "ignore-parent":
+		if v == "" {
+			return fmt.Errorf("ignore-parent requires a non-empty value")
+		}
+		if strings.ContainsAny(v, "*?[") {
+			if _, err := path.Match(v, ""); err != nil {
+				return fmt.Errorf("invalid ignore-parent pattern %q: %w", v, err)
+			}
+			e.ignoreParentGlobs = append(e.ignoreParentGlobs, v)
+		} else {
+			if e.ignoreParents == nil {
+				e.ignoreParents = make(map[string]struct{})
+			}
+			e.ignoreParents[v] = struct{}{}
+		}
 	default:
 		return fmt.Errorf("option %q unknown for ebpf input", k)
 	}
 	return nil
+}
+
+// globToRegex converts a shell-style glob pattern to a regex string.
+// Unlike path.Match, * and ? cross any character (including /).
+func globToRegex(pattern string) string {
+	var b strings.Builder
+	inBracket := false
+	for i := 0; i < len(pattern); i++ {
+		c := pattern[i]
+		switch {
+		case c == '*' && !inBracket:
+			b.WriteString(".*")
+		case c == '?' && !inBracket:
+			b.WriteByte('.')
+		case c == '[' && !inBracket:
+			inBracket = true
+			b.WriteByte('[')
+		case c == ']' && inBracket:
+			inBracket = false
+			b.WriteByte(']')
+		default:
+			// Escape regex metacharacters outside brackets.
+			if !inBracket && strings.ContainsRune(`\.+^${}()|`, rune(c)) {
+				b.WriteByte('\\')
+			}
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
 }
 
 // isNetFiltered returns true if the destination IP/port should be dropped.
@@ -162,17 +232,34 @@ func (e *Input) isNetFiltered(destIP net.IP, dport uint16) bool {
 	return false
 }
 
-// isProcFiltered returns true if the resolved process name matches an
-// ignore-comm rule. We match against proc.Name (from /proc) rather than the
-// eBPF-captured thread comm, because multi-threaded daemons set per-thread
-// names via prctl(PR_SET_NAME) — the kernel comm at hook time can differ
-// from the user-visible process name (e.g. unbound worker threads).
-func (e *Input) isProcFiltered(procName string) bool {
+// isProcFiltered returns true if the resolved process name or command line
+// matches an ignore-comm or ignore-cmdline rule. We match against proc.Name
+// and proc.CmdLine (from /proc) rather than the eBPF-captured thread comm,
+// because multi-threaded daemons set per-thread names via prctl(PR_SET_NAME).
+func (e *Input) isProcFiltered(procName, cmdLine, parentName string) bool {
 	if _, skip := e.ignoreComms[procName]; skip {
 		return true
 	}
 	for _, pat := range e.ignoreCommGlobs {
 		if ok, _ := path.Match(pat, procName); ok {
+			return true
+		}
+	}
+	for _, sub := range e.ignoreCmdlines {
+		if strings.Contains(cmdLine, sub) {
+			return true
+		}
+	}
+	for _, re := range e.ignoreCmdlineGlobs {
+		if re.MatchString(cmdLine) {
+			return true
+		}
+	}
+	if _, skip := e.ignoreParents[parentName]; skip {
+		return true
+	}
+	for _, pat := range e.ignoreParentGlobs {
+		if ok, _ := path.Match(pat, parentName); ok {
 			return true
 		}
 	}
@@ -284,7 +371,11 @@ func (e *Input) Process(ctx context.Context, c chan<- entry.Connection) {
 			proc = fallbackProc(int32(evt.Pid), evt.Comm[:])
 		}
 
-		if e.isProcFiltered(proc.Name) {
+		parentName := ""
+		if proc.Parent != nil {
+			parentName = proc.Parent.Name
+		}
+		if e.isProcFiltered(proc.Name, proc.CmdLine, parentName) {
 			continue
 		}
 
