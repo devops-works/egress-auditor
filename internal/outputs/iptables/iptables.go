@@ -31,7 +31,8 @@ func (e *IPTHandler) prepare() error {
 		`# [{{ .Hook }}] Line generated for {{ .Proc.Name }} running as {{ .Proc.User }}"
 ip{{ if eq .IPv 6 }}6{{ end }}tables -I OUTPUT -d {{ .DestIP }} -p {{ .Protocol }} -m {{ .Protocol }} --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
 		`# [{{ .Hook }}] Line generated for {{ .Proc.Name }} running as {{ .Proc.User }} with command "{{ .Proc.CmdLine }}"
-# [{{ .Hook }}] Parent of this process was {{ .Proc.Parent.Name }} running as {{ .Proc.Parent.User }}
+# [{{ .Hook }}] Parent of this process was {{ .Proc.Parent.Name }} running as {{ .Proc.Parent.User }}{{ if .Proc.Parent.Parent }}
+# [{{ .Hook }}] Grandparent of this process was {{ .Proc.Parent.Parent.Name }} running as {{ .Proc.Parent.Parent.User }}{{ end }}
 ip{{ if eq .IPv 6 }}6{{ end }}tables -I OUTPUT -d {{ .DestIP }} -p {{ .Protocol }} -m {{ .Protocol }} --dport {{ .DestPort }} -j ACCEPT -m comment --comment "{{ .Proc.Name }}"`,
 	}
 

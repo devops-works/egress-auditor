@@ -13,6 +13,7 @@ import (
 
 	"github.com/devops-works/egress-auditor/internal/entry"
 	"github.com/devops-works/egress-auditor/internal/outputs"
+	"github.com/devops-works/egress-auditor/pkg/procdetail"
 )
 
 // Output writes connections to stdout in logfmt format
@@ -80,7 +81,11 @@ func quoteIfNeeded(s string) string {
 func (o *Output) print(e entry.Connection) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	fmt.Fprintf(o.w, "ts=%s hook=%s protocol=%s dest_ip=%s dest_port=%d ip_version=%d proc_name=%s proc_pid=%d proc_user=%s proc_cmdline=%s parent_name=%s parent_pid=%d parent_user=%s\n",
+	grandparent := e.Proc.Parent.Parent
+	if grandparent == nil {
+		grandparent = &procdetail.ProcessDetail{Name: "unknown", User: "unknown"}
+	}
+	fmt.Fprintf(o.w, "ts=%s hook=%s protocol=%s dest_ip=%s dest_port=%d ip_version=%d proc_name=%s proc_pid=%d proc_user=%s proc_cmdline=%s parent_name=%s parent_pid=%d parent_user=%s grandparent_name=%s grandparent_pid=%d grandparent_user=%s\n",
 		time.Now().UTC().Format(time.RFC3339),
 		e.Hook,
 		e.Protocol,
@@ -94,6 +99,9 @@ func (o *Output) print(e entry.Connection) {
 		quoteIfNeeded(e.Proc.Parent.Name),
 		e.Proc.Parent.Pid,
 		quoteIfNeeded(e.Proc.Parent.User),
+		quoteIfNeeded(grandparent.Name),
+		grandparent.Pid,
+		quoteIfNeeded(grandparent.User),
 	)
 }
 

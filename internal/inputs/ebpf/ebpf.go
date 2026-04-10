@@ -63,6 +63,9 @@ type Input struct {
 	ignoreParents     map[string]struct{} // exact parent name matches
 	ignoreParentGlobs []string            // glob patterns for parent name
 
+	ignoreGrandparents     map[string]struct{} // exact grandparent name matches
+	ignoreGrandparentGlobs []string            // glob patterns for grandparent name
+
 	objs  bpfObjects
 	links []link.Link
 
@@ -98,6 +101,8 @@ func (e *Input) Description() string {
 		    wildcards * ? [...] where * crosses any character including /)
 		- "ebpf:ignore-parent:<name>": drop events whose parent process name
 		    matches (same syntax as ignore-comm: exact or glob)
+		- "ebpf:ignore-grandparent:<name>": drop events whose grandparent
+		    process name matches (same syntax as ignore-comm: exact or glob)
 
 	Example:
 		sudo egress-auditor -i ebpf -o logfmt \
@@ -183,6 +188,21 @@ func (e *Input) SetOption(k, v string) error {
 			}
 			e.ignoreParents[v] = struct{}{}
 		}
+	case "ignore-grandparent":
+		if v == "" {
+			return fmt.Errorf("ignore-grandparent requires a non-empty value")
+		}
+		if strings.ContainsAny(v, "*?[") {
+			if _, err := path.Match(v, ""); err != nil {
+				return fmt.Errorf("invalid ignore-grandparent pattern %q: %w", v, err)
+			}
+			e.ignoreGrandparentGlobs = append(e.ignoreGrandparentGlobs, v)
+		} else {
+			if e.ignoreGrandparents == nil {
+				e.ignoreGrandparents = make(map[string]struct{})
+			}
+			e.ignoreGrandparents[v] = struct{}{}
+		}
 	default:
 		return fmt.Errorf("option %q unknown for ebpf input", k)
 	}
@@ -236,7 +256,7 @@ func (e *Input) isNetFiltered(destIP net.IP, dport uint16) bool {
 // matches an ignore-comm or ignore-cmdline rule. We match against proc.Name
 // and proc.CmdLine (from /proc) rather than the eBPF-captured thread comm,
 // because multi-threaded daemons set per-thread names via prctl(PR_SET_NAME).
-func (e *Input) isProcFiltered(procName, cmdLine, parentName string) bool {
+func (e *Input) isProcFiltered(procName, cmdLine, parentName, grandparentName string) bool {
 	if _, skip := e.ignoreComms[procName]; skip {
 		return true
 	}
@@ -260,6 +280,14 @@ func (e *Input) isProcFiltered(procName, cmdLine, parentName string) bool {
 	}
 	for _, pat := range e.ignoreParentGlobs {
 		if ok, _ := path.Match(pat, parentName); ok {
+			return true
+		}
+	}
+	if _, skip := e.ignoreGrandparents[grandparentName]; skip {
+		return true
+	}
+	for _, pat := range e.ignoreGrandparentGlobs {
+		if ok, _ := path.Match(pat, grandparentName); ok {
 			return true
 		}
 	}
@@ -372,10 +400,14 @@ func (e *Input) Process(ctx context.Context, c chan<- entry.Connection) {
 		}
 
 		parentName := ""
+		grandparentName := ""
 		if proc.Parent != nil {
 			parentName = proc.Parent.Name
+			if proc.Parent.Parent != nil {
+				grandparentName = proc.Parent.Parent.Name
+			}
 		}
-		if e.isProcFiltered(proc.Name, proc.CmdLine, parentName) {
+		if e.isProcFiltered(proc.Name, proc.CmdLine, parentName, grandparentName) {
 			continue
 		}
 
@@ -448,6 +480,11 @@ func fallbackProc(pid int32, comm []byte) *procdetail.ProcessDetail {
 			Name:    "unknown",
 			CmdLine: "unknown",
 			User:    "unknown",
+			Parent: &procdetail.ProcessDetail{
+				Name:    "unknown",
+				CmdLine: "unknown",
+				User:    "unknown",
+			},
 		},
 	}
 }

@@ -28,7 +28,11 @@ func GetOwnerOfConnection(protocol string, sip net.IP, spp uint16, dip net.IP, d
 			Name:    "unknown",
 			CmdLine: "unknown",
 			User:    "unknown",
-			Parent:  nil,
+			Parent: &ProcessDetail{
+				Name:    "unknown",
+				CmdLine: "unknown",
+				User:    "unknown",
+			},
 		},
 	}
 
@@ -99,6 +103,19 @@ func New(pid int32) (*ProcessDetail, error) {
 	err = p.Parent.getDetailsFor(p.Parent.Pid)
 	if err != nil {
 		return nil, err
+	}
+
+	// Grandparent — stop if parent is init (pid 1) or kernel (pid 0).
+	if p.Parent.Parent != nil && p.Parent.Parent.Pid > 1 {
+		err = p.Parent.Parent.getDetailsFor(p.Parent.Parent.Pid)
+		if err != nil {
+			// Non-fatal: grandparent may have exited.
+			p.Parent.Parent = &ProcessDetail{
+				Name:    "unknown",
+				CmdLine: "unknown",
+				User:    "unknown",
+			}
+		}
 	}
 
 	return p, nil
